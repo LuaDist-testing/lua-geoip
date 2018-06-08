@@ -6,8 +6,9 @@
 #include "lua-geoip.h"
 #include "database.h"
 
-#define LUAGEOIP_COUNTRY_VERSION     "lua-geoip.country 0.1.1"
-#define LUAGEOIP_COUNTRY_COPYRIGHT   "Copyright (C) 2011, lua-geoip authors"
+#define LUAGEOIP_COUNTRY_VERSION     "lua-geoip.country 0.2"
+#define LUAGEOIP_COUNTRY_COPYRIGHT   \
+        "Copyright (C) 2011-2017, lua-geoip authors"
 #define LUAGEOIP_COUNTRY_DESCRIPTION \
         "Bindings for MaxMind's GeoIP library (country database)"
 
@@ -146,6 +147,21 @@ static int lcountry_query_by_addr(lua_State * L)
     );
 }
 
+static int lcountry_query_by_addr6(lua_State * L)
+{
+  GeoIP * pGeoIP = check_country_db(L, 1);
+  const char * addr = luaL_checkstring(L, 2);
+
+  if (pGeoIP == NULL)
+  {
+    return lua_error(L); /* Error message already on stack */
+  }
+
+  return push_country_info(
+      L, 3, GeoIP_id_by_addr_v6(pGeoIP, addr)
+    );
+}
+
 static int lcountry_query_by_ipnum(lua_State * L)
 {
   GeoIP * pGeoIP = check_country_db(L, 1);
@@ -195,8 +211,8 @@ static int lcountry_close(lua_State * L)
 
   if (pDB && pDB->pGeoIP != NULL)
   {
-  	GeoIP_delete(pDB->pGeoIP);
-  	pDB->pGeoIP = NULL;
+    GeoIP_delete(pDB->pGeoIP);
+    pDB->pGeoIP = NULL;
   }
 
   return 0;
@@ -217,11 +233,12 @@ static int lcountry_tostring(lua_State * L)
   return 1;
 }
 
-static const luaL_reg M[] =
+static const luaL_Reg M[] =
 {
   { "query_by_name", lcountry_query_by_name },
   { "query_by_addr", lcountry_query_by_addr },
   { "query_by_ipnum", lcountry_query_by_ipnum },
+  { "query_by_addr6", lcountry_query_by_addr6 },
 
   { "charset", lcountry_charset },
   { "set_charset", lcountry_set_charset },
@@ -232,7 +249,6 @@ static const luaL_reg M[] =
   { NULL, NULL }
 };
 
-/* Error message capture code inspired by code by Wolfgang Oertl. */
 static int lcountry_open(lua_State * L)
 {
   static const int allowed_types[] =
@@ -245,7 +261,7 @@ static int lcountry_open(lua_State * L)
       L,
       M,
       GEOIP_COUNTRY_EDITION,
-      GEOIP_MEMORY_CACHE,
+      GEOIP_MEMORY_CACHE | GEOIP_SILENCE,
       LUAGEOIP_COUNTRY_MT,
       GEOIP_INDEX_CACHE, /* not allowed */
       2,
@@ -254,7 +270,7 @@ static int lcountry_open(lua_State * L)
 }
 
 /* Lua module API */
-static const struct luaL_reg R[] =
+static const struct luaL_Reg R[] =
 {
   { "open", lcountry_open },
 
@@ -270,7 +286,12 @@ LUALIB_API int luaopen_geoip_country(lua_State * L)
   /*
   * Register module
   */
+#if !defined(LUA_VERSION_NUM) || LUA_VERSION_NUM < 502
   luaL_register(L, "geoip.country", R);
+#else
+  lua_newtable(L);
+  luaL_setfuncs(L, R, 0);
+#endif
 
   /*
   * Register module information

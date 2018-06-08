@@ -4,10 +4,9 @@
 #include "lua-geoip.h"
 #include "database.h"
 
-/* Error message capture code inspired by code by Wolfgang Oertl. */
 int luageoip_common_open_db(
     lua_State * L,
-    const luaL_reg * M,
+    const luaL_Reg * M,
     int default_type,
     int default_flags,
     const char * mt_name,
@@ -18,14 +17,10 @@ int luageoip_common_open_db(
 {
   /* First argument is checked later */
   int flags = luaL_optint(L, 2, default_flags);
-  int charset = luaL_optint(L, 2, GEOIP_CHARSET_UTF8);
+  int charset = luaL_optint(L, 3, GEOIP_CHARSET_UTF8);
 
   GeoIP * pGeoIP = NULL;
   luageoip_DB * pResult = NULL;
-
-  int old_stderr;
-  int pipefd[2];
-  char buf[256];
 
   int error_reported = 0;
 
@@ -39,17 +34,6 @@ int luageoip_common_open_db(
       );
   }
 
-  /* Errors are printed to stderr, capture them */
-  {
-    /* TODO: Handle failures */
-    int result = pipe(pipefd);
-    result = 0 + result; /* While we're not handling failures, shut up compiler */
-    fcntl(pipefd[0], F_SETFL, O_NONBLOCK);
-    fcntl(pipefd[1], F_SETFL, O_NONBLOCK);
-    old_stderr = dup(2);
-    dup2(pipefd[1], 2);
-  }
-
   if (lua_isnoneornil(L, 1))
   {
     pGeoIP = GeoIP_open_type(default_type, flags);
@@ -58,26 +42,6 @@ int luageoip_common_open_db(
   {
     const char * filename = luaL_checkstring(L, 1);
     pGeoIP = GeoIP_open(filename, flags);
-  }
-
-  /* Cleanup error handling */
-  {
-    int n = read(pipefd[0], buf, sizeof(buf));
-    if (n >= 0)
-    {
-      buf[n] = 0;
-
-      if (!pGeoIP) /* ?! What to do otherwise? */
-      {
-        lua_pushnil(L);
-        lua_pushstring(L, buf);
-        error_reported = 1;
-      }
-    }
-
-    close(pipefd[0]);
-    close(pipefd[1]);
-    dup2(old_stderr, 2);
   }
 
   if (pGeoIP)
@@ -134,7 +98,11 @@ int luageoip_common_open_db(
 
   if (luaL_newmetatable(L, mt_name))
   {
+#if !defined(LUA_VERSION_NUM) || LUA_VERSION_NUM < 502
     luaL_register(L, NULL, M);
+#else
+    luaL_setfuncs(L, M, 0);
+#endif
     lua_pushvalue(L, -1);
     lua_setfield(L, -2, "__index");
   }
