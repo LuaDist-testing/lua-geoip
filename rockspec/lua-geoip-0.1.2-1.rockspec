@@ -1,8 +1,8 @@
 package = "lua-geoip"
-version = "0.1-1"
+version = "0.1.2-1"
 source = {
    url = "git://github.com/agladysh/lua-geoip.git",
-   branch = "v0.1"
+   branch = "v0.1.2"
 }
 external_dependencies = {
    GEOIP = {

@@ -6,13 +6,14 @@
 #include "lua-geoip.h"
 #include "database.h"
 
-#define LUAGEOIP_COUNTRY_VERSION     "lua-geoip.country 0.1"
+#define LUAGEOIP_COUNTRY_VERSION     "lua-geoip.country 0.1.1"
 #define LUAGEOIP_COUNTRY_COPYRIGHT   "Copyright (C) 2011, lua-geoip authors"
 #define LUAGEOIP_COUNTRY_DESCRIPTION \
         "Bindings for MaxMind's GeoIP library (country database)"
 
 static GeoIP * check_country_db(lua_State * L, int idx)
 {
+  int type = 0;
   luageoip_DB * pDB = (luageoip_DB *)luaL_checkudata(
       L,
       idx,
@@ -30,7 +31,7 @@ static GeoIP * check_country_db(lua_State * L, int idx)
     return NULL;
   }
 
-  int type = GeoIP_database_edition(pDB->pGeoIP);
+  type = GeoIP_database_edition(pDB->pGeoIP);
   if (
       type != GEOIP_COUNTRY_EDITION &&
       type != GEOIP_COUNTRY_EDITION_V6
@@ -118,12 +119,12 @@ static int push_country_info(lua_State * L, int first_arg_idx, int id)
 static int lcountry_query_by_name(lua_State * L)
 {
   GeoIP * pGeoIP = check_country_db(L, 1);
+  const char * name = luaL_checkstring(L, 2);
+
   if (pGeoIP == NULL)
   {
     return lua_error(L); /* Error message already on stack */
   }
-
-  const char * name = luaL_checkstring(L, 2);
 
   return push_country_info(
       L, 3, GeoIP_id_by_name(pGeoIP, name)
@@ -133,12 +134,12 @@ static int lcountry_query_by_name(lua_State * L)
 static int lcountry_query_by_addr(lua_State * L)
 {
   GeoIP * pGeoIP = check_country_db(L, 1);
+  const char * addr = luaL_checkstring(L, 2);
+
   if (pGeoIP == NULL)
   {
     return lua_error(L); /* Error message already on stack */
   }
-
-  const char * addr = luaL_checkstring(L, 2);
 
   return push_country_info(
       L, 3, GeoIP_id_by_addr(pGeoIP, addr)
@@ -148,12 +149,12 @@ static int lcountry_query_by_addr(lua_State * L)
 static int lcountry_query_by_ipnum(lua_State * L)
 {
   GeoIP * pGeoIP = check_country_db(L, 1);
+  lua_Integer ipnum = luaL_checkinteger(L, 2); /* Hoping that value would fit */
+
   if (pGeoIP == NULL)
   {
     return lua_error(L); /* Error message already on stack */
   }
-
-  lua_Integer ipnum = luaL_checkinteger(L, 2); /* Hoping that value would fit */
 
   return push_country_info(
       L, 3, GeoIP_id_by_ipnum(pGeoIP, ipnum)
@@ -176,12 +177,12 @@ static int lcountry_charset(lua_State * L)
 static int lcountry_set_charset(lua_State * L)
 {
   GeoIP * pGeoIP = check_country_db(L, 1);
+  int charset = luaL_checkint(L, 2);
+
   if (pGeoIP == NULL)
   {
     return lua_error(L); /* Error message already on stack */
   }
-
-  int charset = luaL_checkint(L, 2);
 
   GeoIP_set_charset(pGeoIP, charset);
 
@@ -244,7 +245,7 @@ static int lcountry_open(lua_State * L)
       L,
       M,
       GEOIP_COUNTRY_EDITION,
-      GEOIP_STANDARD,
+      GEOIP_MEMORY_CACHE,
       LUAGEOIP_COUNTRY_MT,
       GEOIP_INDEX_CACHE, /* not allowed */
       2,

@@ -1,9 +1,17 @@
+-- This file was automatically generated for the LuaDist project.
+
 package = "lua-geoip"
-version = "0.1-1"
+version = "0.1.2-1"
+-- LuaDist source
 source = {
-   url = "git://github.com/agladysh/lua-geoip.git",
-   branch = "v0.1"
+  tag = "0.1.2-1",
+  url = "git://github.com/LuaDist-testing/lua-geoip.git"
 }
+-- Original source
+-- source = {
+--    url = "git://github.com/agladysh/lua-geoip.git",
+--    branch = "v0.1.2"
+-- }
 external_dependencies = {
    GEOIP = {
      header = "GeoIP.h",
